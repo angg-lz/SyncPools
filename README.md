@@ -52,7 +52,7 @@ Any interactions with mainnet occur in batches, this is a core feature as it all
 
 ## Lock box
 
-A Lockbox is a mechanism used to manage and secure the ETH deposited by the users for staking. The L1 sync pool is responsible for managing the lock box making sure it is backed by the correct amount of tokens. 
+Lockbox is basically just the [OFTAdapter](https://github.com/LayerZero-Labs/LayerZero-v2/blob/main/oapp/contracts/oft/OFTAdapter.sol), the contract that will contain the outstanding OFT supply on the source (or main) chain.
 
 ## Fast Messages
 
@@ -64,7 +64,7 @@ The L1 update occurs through the LayerZero bridge allowing for the L1 deposit po
 
 # Contracts Structure
 
-> [!TIP]  
+> [!TIP]
 > The [`examples/`](/contracts/examples/) directory has an example implementation of all of the contracts for Ethereum L1 and Linea and Mode L2.
 
 ## `L2SyncPool`
@@ -87,13 +87,13 @@ The `L2SyncPool` needs to know the current exchange rate between ETH and the LST
 
 # Setup
 
-Say the setup of chains is such that we have 1 L1 chain (*`A`*) and two L2 chains (*`<X>`* and *`<Y>`*). 
-> [!TIP]  
+Say the setup of chains is such that we have 1 L1 chain (*`A`*) and two L2 chains (*`<X>`* and *`<Y>`*).
+> [!TIP]
 > The [`examples/`](/contracts/examples/) directory has an example implementation of all of the contracts for Ethereum L1 and **Linea** and **Mode** L2. The [L1Deploy.sol](/script/L1/L1Deploy.sol) and [LineaDeploy.sol](/script/L2/LineaDeploy.sol) and [ModeDeploy.sol](/script/L2/ModeDeploy.sol) script goes through the entire deployment flow for L1 and L2.
 
 
 ### Deployments on L1 chain
-- `L1SyncPool` 
+- `L1SyncPool`
 - Receiver contracts for both X and Y - `L1<X>ReceiverETH` & `L1<Y>ReceiverETH`
 - Dummy token contracts for both X and Y - `DummyToken` (is a dependency for the Receiver contracts)
 
@@ -109,13 +109,13 @@ Say the setup of chains is such that we have 1 L1 chain (*`A`*) and two L2 chain
 - Set dummy token in `L1SyncPool` contract as the address of the deployed DummyToken - has to be set for each `EID` (EID is the [EndpointId](https://docs.layerzero.network/v2/developers/evm/technical-reference/endpoints))
     ```solidity
     L1SyncPoolETH(ethereum.syncPool).setDummyToken(MODE.originEid, ethereum.dummyETHs[CHAINS.MODE]);
-    
+
     L1SyncPoolETH(ethereum.syncPool).setDummyToken(LINEA.originEid, ethereum.dummyETHs[CHAINS.LINEA]);
     ```
 - Set receiver for both `X` and `Y` L2s
     ```solidity
     L1SyncPoolETH(ethereum.syncPool).setReceiver(MODE.originEid, ethereum.receivers[CHAINS.MODE]);
-    
+
     L1SyncPoolETH(ethereum.syncPool).setReceiver(LINEA.originEid, ethereum.receivers[CHAINS.LINEA]);
     ```
 - Set `L2SyncPool` on both L2s as `peers` on `L1SyncPool`
@@ -147,14 +147,14 @@ Say the setup of chains is such that we have 1 L1 chain (*`A`*) and two L2 chain
 > ```solidity
 > emit Sync(dstEid, tokenIn, unsyncedAmountIn, unsyncedAmountOut);
 > ```
-- `.lzReceive` on L1SyncPool is called 
+- `.lzReceive` on L1SyncPool is called
   - increments the vault's (or lockbox) assets by the deposited amount
   - **Anticipates a deposit**: executes [`_anticipatedDeposit`](https://github.com/LayerZero-Labs/SyncPools/blob/5ef225b435f3df56f2255b034fe251c27e765d7f/contracts/examples/L1/L1SyncPoolETH.sol#L108) - Will mint the dummy tokens and deposit them to the L1 deposit pool
-  - calls [`_handleAnticipatedDeposit`](https://github.com/LayerZero-Labs/SyncPools/blob/5ef225b435f3df56f2255b034fe251c27e765d7f/contracts/L1/L1BaseSyncPoolUpgradeable.sol#L266) - Internal function to handle an anticipated deposit. 
-    - Will emit an InsufficientDeposit event if the actual amount out is less than the expected amount out. 
-    - Will emit a Fee event if the actual amount out is equal or greater than the expected amount out. 
-    - The fee kept in this contract will be used to back any future insufficient deposits. 
+  - calls [`_handleAnticipatedDeposit`](https://github.com/LayerZero-Labs/SyncPools/blob/5ef225b435f3df56f2255b034fe251c27e765d7f/contracts/L1/L1BaseSyncPoolUpgradeable.sol#L266) - Internal function to handle an anticipated deposit.
+    - Will emit an InsufficientDeposit event if the actual amount out is less than the expected amount out.
+    - Will emit a Fee event if the actual amount out is equal or greater than the expected amount out.
+    - The fee kept in this contract will be used to back any future insufficient deposits.
     - When the fee is used, the total unbacked tokens will be lower than the actual missing amount
 >[!IMPORTANT]
 > Any time the `InsufficientDeposit` event is emitted, necessary actions should be taken to back the lock box (such as using POL, increasing the deposit fee on the faulty L2, etc.)
-      
+
